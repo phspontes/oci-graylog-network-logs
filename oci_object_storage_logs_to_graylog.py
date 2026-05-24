@@ -205,6 +205,59 @@ def nested_get(data: Dict[str, Any], path: List[str]) -> Any:
     return current
 
 
+def first_present(*values: Any) -> Any:
+    for value in values:
+        if value is not None and value != "":
+            return value
+    return None
+
+
+def to_int(value: Any) -> Optional[int]:
+    if value is None or value == "":
+        return None
+    if isinstance(value, bool):
+        return int(value)
+    if isinstance(value, int):
+        return value
+    if isinstance(value, float):
+        return int(value)
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            try:
+                return int(float(value.strip()))
+            except ValueError:
+                return None
+    return None
+
+
+def add_if_present(target: Dict[str, Any], key: str, value: Any) -> None:
+    if value is not None and value != "":
+        target[key] = value
+
+
+def add_int_if_present(target: Dict[str, Any], key: str, value: Any) -> None:
+    parsed = to_int(value)
+    if parsed is not None:
+        target[key] = parsed
+
+
+def protocol_name(value: Any) -> Optional[str]:
+    proto = to_int(value)
+    if proto == 1:
+        return "icmp"
+    if proto == 6:
+        return "tcp"
+    if proto == 17:
+        return "udp"
+    if proto is not None:
+        return str(proto)
+    if value:
+        return str(value).lower()
+    return None
+
+
 def record_time(record: Dict[str, Any]) -> dt.datetime:
     candidates = [
         record.get("time"),
@@ -250,8 +303,10 @@ def map_level(value: Any) -> int:
 
 def make_gelf(record: Dict[str, Any], object_name: str, index: int) -> Dict[str, Any]:
     data = record.get("data") if isinstance(record.get("data"), dict) else record
+    oracle = record.get("oracle") if isinstance(record.get("oracle"), dict) else {}
     log_content = data.get("logContent") if isinstance(data.get("logContent"), dict) else {}
     log_content_data = log_content.get("data") if isinstance(log_content.get("data"), dict) else {}
+
     message = (
         log_content_data.get("message")
         or data.get("message")
@@ -259,21 +314,73 @@ def make_gelf(record: Dict[str, Any], object_name: str, index: int) -> Dict[str,
         or json.dumps(record, default=str, ensure_ascii=False)
     )
     ts = record_time(record)
-    gelf = {
+
+    source = first_present(record.get("source"), data.get("source"), oracle.get("source"))
+    public_ip = first_present(oracle.get("publicIpV4"), oracle.get("publicIpv4"), oracle.get("publicIp"))
+    resource_id = first_present(oracle.get("resourceId"), oracle.get("resourceid"), data.get("resourceId"), data.get("resourceid"))
+
+    bytes_value = first_present(
+        data.get("bytes"),
+        data.get("bytesOut"),
+        data.get("bytesIn"),
+        data.get("byteCount"),
+        log_content_data.get("bytes"),
+        log_content_data.get("bytesOut"),
+        log_content_data.get("byteCount"),
+        oracle.get("bytes"),
+    )
+    packets_value = first_present(
+        data.get("packets"),
+        data.get("packetsOut"),
+        data.get("packetsIn"),
+        data.get("packetCount"),
+        log_content_data.get("packets"),
+        log_content_data.get("packetsOut"),
+        log_content_data.get("packetCount"),
+        oracle.get("packets"),
+    )
+    protocol_value = first_present(data.get("protocol"), log_content_data.get("protocol"), oracle.get("protocol"))
+
+    gelf: Dict[str, Any] = {
         "version": "1.1",
-        "host": str(data.get("source") or data.get("resourceName") or "oci-object-storage"),
+        "host": str(first_present(public_ip, source, data.get("resourceName"), "oci-object-storage")),
         "short_message": str(message)[:32000],
         "timestamp": ts.timestamp(),
-        "level": map_level(data.get("level") or data.get("severity")),
+        "level": map_level(data.get("level") or data.get("severity") or record.get("severity")),
         "_oci_event_id": record_id(record, object_name, index),
         "_oci_object_name": object_name,
-        "_oci_compartment_id": data.get("compartmentId"),
-        "_oci_log_group_id": data.get("logGroupId"),
-        "_oci_log_id": data.get("logId"),
-        "_oci_source": data.get("source"),
-        "_oci_type": data.get("type"),
         "_oci_raw": json.dumps(record, default=str, ensure_ascii=False),
     }
+
+    add_if_present(gelf, "_oci_id", record.get("id"))
+    add_if_present(gelf, "_oci_compartment_id", first_present(data.get("compartmentId"), data.get("compartmentid"), oracle.get("compartmentId"), oracle.get("compartmentid")))
+    add_if_present(gelf, "_oci_log_group_id", first_present(data.get("logGroupId"), data.get("loggroupid"), oracle.get("logGroupId"), oracle.get("loggroupid")))
+    add_if_present(gelf, "_oci_log_id", first_present(data.get("logId"), data.get("logid"), oracle.get("logId"), oracle.get("logid")))
+    add_if_present(gelf, "_oci_source", source)
+    add_if_present(gelf, "_oci_type", first_present(record.get("type"), data.get("type"), oracle.get("type")))
+    add_if_present(gelf, "_oci_resource_id", resource_id)
+    add_if_present(gelf, "_oci_public_ipv4", public_ip)
+    add_if_present(gelf, "_oci_vnic_ocid", first_present(oracle.get("vnicOcid"), oracle.get("vnicocid"), data.get("vnicOcid")))
+    add_if_present(gelf, "_oci_subnet_ocid", first_present(oracle.get("subnetOcid"), oracle.get("subnetocid"), data.get("subnetOcid")))
+    add_if_present(gelf, "_oci_capture_filter_ocid", first_present(oracle.get("captureFilterOcid"), oracle.get("capturefilterocid"), data.get("captureFilterOcid")))
+    add_if_present(gelf, "_oci_ingested_time", first_present(oracle.get("ingestedtime"), oracle.get("ingestedTime"), data.get("ingestedtime"), data.get("ingestedTime")))
+
+    add_int_if_present(gelf, "_oci_flow_bytes", bytes_value)
+    add_int_if_present(gelf, "_oci_flow_packets", packets_value)
+    add_int_if_present(gelf, "_oci_flow_src_port", first_present(data.get("sourcePort"), data.get("srcPort"), data.get("source_port"), log_content_data.get("sourcePort"), log_content_data.get("srcPort")))
+    add_int_if_present(gelf, "_oci_flow_dst_port", first_present(data.get("destinationPort"), data.get("dstPort"), data.get("destination_port"), log_content_data.get("destinationPort"), log_content_data.get("dstPort")))
+    add_int_if_present(gelf, "_oci_flow_protocol", protocol_value)
+    add_if_present(gelf, "_oci_flow_protocol_name", first_present(data.get("protocolName"), data.get("protocol_name"), log_content_data.get("protocolName"), protocol_name(protocol_value)))
+    add_if_present(gelf, "_oci_flow_src_addr", first_present(data.get("sourceAddress"), data.get("srcAddr"), data.get("srcaddr"), data.get("source"), log_content_data.get("sourceAddress"), log_content_data.get("srcAddr")))
+    add_if_present(gelf, "_oci_flow_dst_addr", first_present(data.get("destinationAddress"), data.get("dstAddr"), data.get("dstaddr"), data.get("destination"), log_content_data.get("destinationAddress"), log_content_data.get("dstAddr")))
+    add_if_present(gelf, "_oci_flow_action", first_present(data.get("action"), log_content_data.get("action"), oracle.get("action")))
+    add_if_present(gelf, "_oci_flow_status", first_present(data.get("status"), data.get("logStatus"), log_content_data.get("status"), log_content_data.get("logStatus")))
+    add_if_present(gelf, "_oci_flow_direction", first_present(data.get("direction"), log_content_data.get("direction"), oracle.get("direction")))
+
+    flow_mbytes = to_int(bytes_value)
+    if flow_mbytes is not None:
+        gelf["_oci_flow_mbytes"] = round(flow_mbytes / 1024 / 1024, 6)
+
     return {key: value for key, value in gelf.items() if value is not None}
 
 
