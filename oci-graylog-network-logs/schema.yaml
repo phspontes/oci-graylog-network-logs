@@ -1,0 +1,211 @@
+title: Graylog em Oracle Linux 9
+description: Provisiona uma VM Oracle Linux 9 e instala Graylog em Docker via cloud-init.
+schemaVersion: 1.1.0
+version: "20260522"
+locale: "pt-BR"
+
+variableGroups:
+  - title: Localizacao
+    visible: true
+    variables:
+      - region
+      - instance_compartment_ocid
+      - vcn_compartment_ocid
+      - vcn_ocid
+      - subnet_compartment_ocid
+      - subnet_ocid
+  - title: Instancia
+    visible: true
+    variables:
+      - instance_name
+      - shape
+      - ocpus
+      - memory_in_gbs
+      - boot_volume_size_in_gbs
+      - assign_public_ip
+      - private_ip
+      - ssh_public_key
+  - title: Acesso e Graylog
+    visible: true
+    variables:
+      - ssh_source_cidr
+      - graylog_source_cidr
+      - graylog_version
+      - graylog_timezone
+  - title: Ingestao de Logs OCI
+    visible: true
+    variables:
+      - oci_log_bucket_compartment_ocid
+      - oci_log_bucket_name
+      - oci_log_object_prefix
+      - collector_script_url
+  - title: IAM Opcional
+    visible: true
+    variables:
+      - create_iam_policy
+  - title: Content Pack Graylog
+    visible: true
+    variables:
+      - graylog_content_pack_url
+  - title: Variaveis OCI automaticas
+    visible: false
+    variables:
+      - tenancy_ocid
+
+variables:
+  tenancy_ocid:
+    type: oci:identity:tenancy:id
+    required: true
+    visible: false
+
+  region:
+    type: oci:identity:region:name
+    title: Regiao
+    required: true
+
+  instance_compartment_ocid:
+    type: oci:identity:compartment:id
+    title: Compartment da VM
+    required: true
+
+  vcn_compartment_ocid:
+    type: oci:identity:compartment:id
+    title: Compartment da VCN
+    required: true
+
+  subnet_compartment_ocid:
+    type: oci:identity:compartment:id
+    title: Compartment da Subnet
+    required: true
+
+  vcn_ocid:
+    type: oci:core:vcn:id
+    title: VCN
+    required: true
+    dependsOn:
+      compartmentId: ${vcn_compartment_ocid}
+
+  subnet_ocid:
+    type: oci:core:subnet:id
+    title: Subnet
+    required: true
+    dependsOn:
+      compartmentId: ${subnet_compartment_ocid}
+      vcnId: ${vcn_ocid}
+
+  instance_name:
+    type: string
+    title: Nome da VM
+    required: true
+    default: graylog-ol9
+
+  shape:
+    type: oci:core:instanceshape:name
+    title: "Shape (minimo recomendado: E5 Flex)"
+    required: true
+    default: VM.Standard.E5.Flex
+    dependsOn:
+      compartmentId: ${instance_compartment_ocid}
+
+  ocpus:
+    type: number
+    title: "OCPUs (minimo recomendado: 1)"
+    required: true
+    default: 1
+    minimum: 1
+
+  memory_in_gbs:
+    type: number
+    title: "Memoria em GB (minimo recomendado: 12)"
+    required: true
+    default: 12
+    minimum: 8
+
+  boot_volume_size_in_gbs:
+    type: number
+    title: "Disco de boot em GB (minimo recomendado: 100)"
+    required: true
+    default: 100
+    minimum: 50
+
+  assign_public_ip:
+    type: boolean
+    title: Atribuir IP publico
+    required: true
+    default: true
+
+  private_ip:
+    type: string
+    title: IP privado da VM
+    description: "Opcional. Deixe vazio para a OCI alocar automaticamente dentro da subnet."
+    required: false
+    default: ""
+
+  ssh_public_key:
+    type: oci:core:ssh:publickey
+    title: Chave publica SSH
+    required: true
+    sensitive: true
+
+  ssh_source_cidr:
+    type: string
+    title: CIDR permitido para SSH
+    required: true
+    default: "0.0.0.0/0"
+
+  graylog_source_cidr:
+    type: string
+    title: CIDR permitido para Graylog Web
+    required: true
+    default: "0.0.0.0/0"
+
+  graylog_version:
+    type: enum
+    title: Versao Graylog
+    required: true
+    default: "7.1"
+    enum:
+      - "7.1"
+
+  graylog_timezone:
+    type: string
+    title: Timezone Graylog
+    required: true
+    default: "America/Sao_Paulo"
+
+  oci_log_bucket_compartment_ocid:
+    type: oci:identity:compartment:id
+    title: Compartment do bucket de logs
+    required: true
+
+  oci_log_bucket_name:
+    type: string
+    title: Bucket de logs OCI
+    required: true
+
+  oci_log_object_prefix:
+    type: string
+    title: Prefixo dos objetos de log
+    required: false
+    default: ""
+
+
+  collector_script_url:
+    type: string
+    title: URL raw do script coletor
+    required: true
+    default: "https://raw.githubusercontent.com/phspontes/oci-graylog-network-logs/refs/heads/main/scripts/oci_object_storage_logs_to_graylog.py"
+
+
+  create_iam_policy:
+    type: boolean
+    title: Criar Dynamic Group e Policy
+    required: true
+    default: false
+
+
+  graylog_content_pack_url:
+    type: string
+    title: URL raw do Content Pack
+    required: false
+    default: "https://raw.githubusercontent.com/phspontes/oci-graylog-network-logs/refs/heads/main/scripts/oci-vcn-flow-dashboard-final.json"

@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.py[cod]
+
+# Terraform local state/cache
+.terraform/
+.terraform.lock.hcl
+*.tfstate
+*.tfstate.*
+terraform.tfvars
+terraform.tfvars.json
+crash.log
+crash.*.log
+
+# OS/editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Build/release artifacts
+*.zip

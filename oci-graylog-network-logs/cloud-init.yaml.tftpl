@@ -1,0 +1,374 @@
+#cloud-config
+package_update: false
+package_upgrade: false
+
+write_files:
+  - path: /etc/motd.d/graylog-bootstrap
+    permissions: "0644"
+    owner: root:root
+    content: |
+      Graylog esta sendo instalado via cloud-init.
+
+      Para acompanhar o provisionamento:
+        sudo tail -f /var/log/cloud-init-output.log
+
+      Para verificar o status final do cloud-init:
+        cloud-init status --long
+
+      Quando o Docker Compose estiver criado, acompanhe o Graylog com:
+        cd /opt/graylog
+        sudo docker compose logs -f graylog
+
+      Dados de acesso, apos concluir:
+        sudo cat /root/graylog-access.txt
+
+
+
+  - path: /root/install-graylog.sh
+    permissions: "0700"
+    owner: root:root
+    content: |
+      #!/usr/bin/env bash
+      set -euo pipefail
+
+      retry_cmd() {
+        local attempts=0
+        local max_attempts=12
+        until "$@"; do
+          attempts=$((attempts + 1))
+          if [ "$attempts" -ge "$max_attempts" ]; then
+            echo "ERRO: comando falhou apos $attempts tentativas"
+            return 1
+          fi
+          echo "Comando falhou, nova tentativa em 20s"
+          sleep 20
+        done
+      }
+
+      systemctl stop packagekit.service dnf-makecache.service dnf-makecache.timer 2>/dev/null || true
+      systemctl disable dnf-makecache.timer 2>/dev/null || true
+      timedatectl set-timezone ${graylog_timezone}
+
+      if getent passwd opc >/dev/null; then
+        cat >/home/opc/GRAYLOG-README.txt <<'EOF'
+      Graylog esta sendo instalado via cloud-init. Esse processo pode demorar alguns minutos.
+
+      Provisionamento cloud-init:
+        sudo tail -f /var/log/cloud-init-output.log
+
+      Status do cloud-init:
+        cloud-init status --long
+
+      Logs de inicializacao do Graylog:
+        cd /opt/graylog
+        sudo docker compose logs -f graylog
+
+      Status dos containers:
+        cd /opt/graylog
+        sudo docker compose ps
+
+      Dados de acesso, apos concluir:
+        sudo cat /root/graylog-access.txt
+
+      Sintaxe IAM para Instance Principal, se a policy nao foi criada automaticamente:
+        sudo cat /root/graylog-oci-iam-policy.txt
+
+      Logs do coletor OCI Object Storage para Graylog:
+        sudo journalctl -u oci-object-logs-to-graylog -f
+      EOF
+        chown opc:opc /home/opc/GRAYLOG-README.txt
+        chmod 0644 /home/opc/GRAYLOG-README.txt
+      fi
+
+      echo "[1/9] Instalando Docker Engine"
+
+      retry_cmd dnf -y update
+
+      retry_cmd dnf -y remove \
+        docker \
+        docker-client \
+        docker-client-latest \
+        docker-common \
+        docker-latest \
+        docker-latest-logrotate \
+        docker-logrotate \
+        docker-engine \
+        podman \
+        runc || true
+
+      retry_cmd dnf -y install dnf-plugins-core curl ca-certificates openssl iproute python3-pip
+
+      retry_cmd dnf config-manager --add-repo https://download.docker.com/linux/rhel/docker-ce.repo
+      retry_cmd rpm --import https://download.docker.com/linux/rhel/gpg
+      retry_cmd dnf clean packages
+
+      retry_cmd dnf -y install \
+        docker-ce \
+        docker-ce-cli \
+        containerd.io \
+        docker-buildx-plugin \
+        docker-compose-plugin
+
+      systemctl enable --now docker
+      retry_cmd python3 -m pip install --upgrade oci requests
+
+      echo "[2/9] Ajustando sysctl para Graylog Data Node"
+
+      cat >/etc/sysctl.d/99-graylog.conf <<'EOF'
+      vm.max_map_count=262144
+      EOF
+
+      sysctl --system
+
+      echo "[3/9] Coletando metadata da instancia OCI"
+
+      OCI_METADATA_URL='http://169.254.169.254/opc/v2'
+
+      INSTANCE_OCID="$(curl -fsS -H 'Authorization: Bearer Oracle' \
+        "$${OCI_METADATA_URL}/instance/id")"
+
+      PRIMARY_IP="$(ip -4 route get 1.1.1.1 | awk '
+        {
+          for (i = 1; i <= NF; i++) {
+            if ($i == "src") {
+              print $(i + 1)
+              exit
+            }
+          }
+        }
+      ')"
+
+      if [ -z "$${INSTANCE_OCID}" ]; then
+        echo "ERRO: nao foi possivel obter o OCID da instancia via metadata OCI."
+        exit 1
+      fi
+
+      if [ -z "$${PRIMARY_IP}" ]; then
+        echo "ERRO: nao foi possivel detectar o IP principal da interface."
+        exit 1
+      fi
+
+      cat >/root/graylog-oci-iam-policy.txt <<EOF
+      Dynamic Group e Policy para o coletor OCI Object Storage -> Graylog
+      
+      Modo automatico solicitado na stack: ${create_iam_policy}
+      
+      Se o modo automatico estiver false, crie manualmente:
+      
+      Dynamic Group name:
+        ${dynamic_group_name}
+      
+      Dynamic Group matching rule:
+        ALL {instance.id = '$${INSTANCE_OCID}'}
+      
+      Policy compartment:
+        ${oci_log_bucket_compartment_ocid}
+      
+      Policy statements:
+        Allow dynamic-group ${dynamic_group_name} to inspect buckets in compartment id ${oci_log_bucket_compartment_ocid}
+        Allow dynamic-group ${dynamic_group_name} to read objects in compartment id ${oci_log_bucket_compartment_ocid}
+      
+      Bucket usado pelo coletor:
+        ${oci_log_bucket_name}
+      EOF
+      chmod 600 /root/graylog-oci-iam-policy.txt
+
+      echo "[4/9] Calculando heap do Data Node"
+
+      DATANODE_HEAP="$(awk '
+        /MemTotal/ {
+          gb = int($2 / 1024 / 1024 / 2)
+          if (gb < 1) gb = 1
+          if (gb > 31) gb = 31
+          print gb "g"
+        }
+      ' /proc/meminfo)"
+
+      echo "Heap configurado para o Data Node: $${DATANODE_HEAP}"
+
+      echo "[5/9] Criando arquivos do Graylog"
+
+      mkdir -p /opt/graylog
+      cd /opt/graylog
+
+      ADMIN_PASSWORD="$${INSTANCE_OCID}"
+
+      GRAYLOG_PASSWORD_SECRET="$(printf '%s' "$${INSTANCE_OCID}:graylog-password-secret" \
+        | sha512sum \
+        | awk '{print $1}')"
+
+      GRAYLOG_ROOT_PASSWORD_SHA2="$(printf '%s' "$${ADMIN_PASSWORD}" \
+        | sha256sum \
+        | awk '{print $1}')"
+
+      GRAYLOG_HTTP_EXTERNAL_URI="http://$${PRIMARY_IP}:9000/"
+
+      CONTENT_PACK_URL="${graylog_content_pack_url}"
+      CONTENT_PACK_LOADER_ENABLED=false
+      CONTENT_PACK_AUTO_INSTALL=""
+      CONTENT_PACK_DIR="/usr/share/graylog/data/contentpacks"
+
+      if [ -n "$${CONTENT_PACK_URL}" ]; then
+        echo "Baixando Content Pack Graylog: $${CONTENT_PACK_URL}"
+        mkdir -p /opt/graylog/contentpacks
+        curl -fsSL "$${CONTENT_PACK_URL}" -o /opt/graylog/contentpacks/oci-vcn-flow-dashboard-final.json
+        python3 -m json.tool /opt/graylog/contentpacks/oci-vcn-flow-dashboard-final.json >/dev/null
+        chmod 644 /opt/graylog/contentpacks/oci-vcn-flow-dashboard-final.json
+        CONTENT_PACK_LOADER_ENABLED=true
+        CONTENT_PACK_AUTO_INSTALL="oci-vcn-flow-dashboard-final.json"
+      fi
+
+      cat >/opt/graylog/.env <<EOF
+      GRAYLOG_PASSWORD_SECRET=$${GRAYLOG_PASSWORD_SECRET}
+      GRAYLOG_ROOT_PASSWORD_SHA2=$${GRAYLOG_ROOT_PASSWORD_SHA2}
+      GRAYLOG_HTTP_EXTERNAL_URI=$${GRAYLOG_HTTP_EXTERNAL_URI}
+      GRAYLOG_ROOT_TIMEZONE=${graylog_timezone}
+      GRAYLOG_IMAGE=graylog/graylog:${graylog_version}
+      DATANODE_IMAGE=graylog/graylog-datanode:${graylog_version}
+      DATANODE_HEAP=$${DATANODE_HEAP}
+      GRAYLOG_TELEMETRY_ENABLED=false
+      GRAYLOG_CONTENT_PACKS_LOADER_ENABLED=$${CONTENT_PACK_LOADER_ENABLED}
+      GRAYLOG_CONTENT_PACKS_DIR=$${CONTENT_PACK_DIR}
+      GRAYLOG_CONTENT_PACKS_AUTO_INSTALL=$${CONTENT_PACK_AUTO_INSTALL}
+      OCI_LOG_BUCKET_NAME=${oci_log_bucket_name}
+      OCI_LOG_BUCKET=${oci_log_bucket_name}
+      OCI_LOG_OBJECT_PREFIX=${oci_log_object_prefix}
+      EOF
+
+      chmod 600 /opt/graylog/.env
+
+      cat >/opt/graylog/docker-compose.yml <<'EOF'
+      services:
+        mongodb:
+          image: mongo:7.0
+          restart: on-failure
+          networks:
+            - graylog
+          volumes:
+            - mongodb_data:/data/db
+            - mongodb_config:/data/configdb
+
+        datanode:
+          image: $${DATANODE_IMAGE:-graylog/graylog-datanode:7.1}
+          hostname: datanode
+          restart: on-failure
+          networks:
+            - graylog
+          environment:
+            GRAYLOG_DATANODE_NODE_ID_FILE: /var/lib/graylog-datanode/node-id
+            GRAYLOG_DATANODE_PASSWORD_SECRET: $${GRAYLOG_PASSWORD_SECRET}
+            GRAYLOG_DATANODE_MONGODB_URI: mongodb://mongodb:27017/graylog
+            GRAYLOG_DATANODE_OPENSEARCH_HEAP: $${DATANODE_HEAP:-5g}
+          ulimits:
+            memlock:
+              hard: -1
+              soft: -1
+            nofile:
+              soft: 65536
+              hard: 65536
+          ports:
+            - "127.0.0.1:8999:8999/tcp"
+            - "127.0.0.1:9200:9200/tcp"
+            - "127.0.0.1:9300:9300/tcp"
+          volumes:
+            - graylog_datanode:/var/lib/graylog-datanode
+
+        graylog:
+          image: $${GRAYLOG_IMAGE:-graylog/graylog:7.1}
+          hostname: server
+          restart: on-failure
+          depends_on:
+            mongodb:
+              condition: service_started
+            datanode:
+              condition: service_started
+          entrypoint: /usr/bin/tini -- /docker-entrypoint.sh
+          networks:
+            - graylog
+          environment:
+            GRAYLOG_NODE_ID_FILE: /usr/share/graylog/data/data/node-id
+            GRAYLOG_PASSWORD_SECRET: $${GRAYLOG_PASSWORD_SECRET}
+            GRAYLOG_ROOT_PASSWORD_SHA2: $${GRAYLOG_ROOT_PASSWORD_SHA2}
+            GRAYLOG_HTTP_BIND_ADDRESS: 0.0.0.0:9000
+            GRAYLOG_HTTP_EXTERNAL_URI: $${GRAYLOG_HTTP_EXTERNAL_URI}
+            GRAYLOG_MONGODB_URI: mongodb://mongodb:27017/graylog
+            GRAYLOG_ROOT_TIMEZONE: $${GRAYLOG_ROOT_TIMEZONE:-UTC}
+            GRAYLOG_SELFSIGNED_STARTUP: "true"
+            GRAYLOG_TELEMETRY_ENABLED: "$${GRAYLOG_TELEMETRY_ENABLED:-false}"
+            GRAYLOG_CONTENT_PACKS_LOADER_ENABLED: "$${GRAYLOG_CONTENT_PACKS_LOADER_ENABLED:-false}"
+            GRAYLOG_CONTENT_PACKS_DIR: "$${GRAYLOG_CONTENT_PACKS_DIR:-/usr/share/graylog/data/contentpacks}"
+            GRAYLOG_CONTENT_PACKS_AUTO_INSTALL: "$${GRAYLOG_CONTENT_PACKS_AUTO_INSTALL:-}"
+          ports:
+            - "9000:9000/tcp"
+            - "127.0.0.1:12202:12202/tcp"
+          volumes:
+            - graylog_data:/usr/share/graylog/data
+            - ./contentpacks:/usr/share/graylog/data/contentpacks:ro
+
+      networks:
+        graylog:
+          driver: bridge
+
+      volumes:
+        mongodb_data:
+        mongodb_config:
+        graylog_datanode:
+        graylog_data:
+      EOF
+
+      chmod 600 /opt/graylog/docker-compose.yml
+
+      echo "[6/9] Liberando portas no firewalld, se estiver ativo"
+
+      if systemctl is-active --quiet firewalld; then
+        firewall-cmd --permanent --add-port=9000/tcp
+        firewall-cmd --reload
+      fi
+
+      echo "[7/9] Baixando imagens e subindo Graylog"
+
+      cd /opt/graylog
+      docker compose pull
+      docker compose up -d
+
+      echo "[8/9] Instalando coletor Object Storage -> Graylog"
+
+      mkdir -p /opt/graylog/bin /var/lib/oci-object-logs-to-graylog
+      curl -fsSL "${collector_script_url}" -o /opt/graylog/bin/oci_object_storage_logs_to_graylog.py
+      chmod 700 /opt/graylog/bin/oci_object_storage_logs_to_graylog.py
+      python3 -m py_compile /opt/graylog/bin/oci_object_storage_logs_to_graylog.py
+
+      cat >/etc/systemd/system/oci-object-logs-to-graylog.service <<EOF
+      [Unit]
+      Description=OCI Object Storage Logs to Graylog
+      After=network-online.target docker.service
+      Wants=network-online.target
+
+      [Service]
+      Type=simple
+      User=root
+      EnvironmentFile=/opt/graylog/.env
+      ExecStart=/usr/bin/python3 /opt/graylog/bin/oci_object_storage_logs_to_graylog.py --region ${region} --bucket \$${OCI_LOG_BUCKET} --prefix \$${OCI_LOG_OBJECT_PREFIX} --graylog-url http://127.0.0.1:12202/gelf --graylog-api-url http://127.0.0.1:9000/api
+      Restart=always
+      RestartSec=30
+
+      [Install]
+      WantedBy=multi-user.target
+      EOF
+
+      systemctl daemon-reload
+      systemctl enable --now oci-object-logs-to-graylog.service
+
+      echo "[9/9] Status final"
+      docker compose ps
+
+      cat >/root/graylog-access.txt <<EOF
+      URL: $${GRAYLOG_HTTP_EXTERNAL_URI}
+      Usuario: admin
+      Senha inicial: $${INSTANCE_OCID}
+      EOF
+
+      cat /root/graylog-access.txt
+
+runcmd:
+  - [/bin/bash, /root/install-graylog.sh]
