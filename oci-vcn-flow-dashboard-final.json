@@ -1,0 +1,1293 @@
+{
+  "v": 1,
+  "id": "3ef13cbd-5062-40ab-a1d8-e4a8b67a54f7",
+  "rev": 8,
+  "name": "OCI VCN Flow logs",
+  "summary": "OCI VCN Flow logs com foco em volumetria em MB e grandes transferências",
+  "description": "Content Pack final com widgets de banda, portas de destino, recursos OCI, VNICs e grandes transferências.",
+  "vendor": "OCI",
+  "url": "",
+  "parameters": [],
+  "entities": [
+    {
+      "v": "1",
+      "type": {
+        "name": "dashboard",
+        "version": "2"
+      },
+      "id": "462a3692-ed00-428b-802f-a2f50ca3560b",
+      "data": {
+        "summary": {
+          "@type": "string",
+          "@value": ""
+        },
+        "search": {
+          "queries": [
+            {
+              "id": "55427e7a-1b68-486e-a9be-8e2d11a6acd5",
+              "timerange": {
+                "type": "relative",
+                "from": 86400
+              },
+              "filters": [],
+              "query": {
+                "type": "elasticsearch",
+                "query_string": "oci_flow_bytes:*"
+              },
+              "search_types": [
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "kpi-total-bytes",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "id": "ca965804-b1b0-47be-a4e7-f365b06481be"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "kpi-total-packets",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_packets)",
+                      "field": "oci_flow_packets"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "id": "7883736e-0ec6-48fd-b024-8a575bfb1c83"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "kpi-flow-count",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [],
+                  "type": "pivot",
+                  "id": "ae5db61a-7108-44df-8517-83a535daaead"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-src-bytes",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_src_addr"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "350f8a99-bf5d-4455-9bd6-a102afc05e4f"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-dst-bytes",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_dst_addr"
+                      ],
+                      "limit": 15,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "7ffd5c40-bede-484c-a7fd-a47e15032314"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-src-dst-pairs",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    },
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_packets)",
+                      "field": "oci_flow_packets"
+                    },
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_src_addr"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    },
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_dst_addr"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "90d979f1-78ae-487f-85da-2b88ab14481a"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-dst-port-pie-mbytes",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_dst_port"
+                      ],
+                      "limit": 20,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "86019d4c-d18c-4f5b-ba98-e80108a3cfd2"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_action:*"
+                  },
+                  "name": "action-count",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_action"
+                      ],
+                      "limit": 10,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "bb99ec76-472a-42bf-b221-12e6fda6abe6"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-resource-table",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    },
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_packets)",
+                      "field": "oci_flow_packets"
+                    },
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_resource_id"
+                      ],
+                      "limit": 20,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "8c67fb4a-8d7a-42cd-9100-bb1edc28277b"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-vnic-bytes",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_vnic_ocid"
+                      ],
+                      "limit": 20,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "1e35bbdb-792e-4a98-9690-fa1536ba5585"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_bytes:*"
+                  },
+                  "name": "top-public-ip-bytes",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_public_ipv4"
+                      ],
+                      "limit": 20,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "8ab0575e-4870-4cf2-bfa3-bcb37393058b"
+                },
+                {
+                  "query": {
+                    "type": "elasticsearch",
+                    "query_string": "oci_flow_mbytes:>100"
+                  },
+                  "name": "large-transfer-tuples",
+                  "timerange": {
+                    "type": "relative",
+                    "from": 86400
+                  },
+                  "series": [
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_mbytes)",
+                      "field": "oci_flow_mbytes"
+                    },
+                    {
+                      "type": "sum",
+                      "id": "sum(oci_flow_packets)",
+                      "field": "oci_flow_packets"
+                    },
+                    {
+                      "type": "count",
+                      "id": "count()",
+                      "field": null
+                    }
+                  ],
+                  "rollup": true,
+                  "row_groups": [
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_src_addr"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    },
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_dst_addr"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    },
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_dst_port"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    },
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_flow_protocol_name"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    },
+                    {
+                      "type": "values",
+                      "fields": [
+                        "oci_resource_id"
+                      ],
+                      "limit": 50,
+                      "skip_empty_values": true
+                    }
+                  ],
+                  "type": "pivot",
+                  "id": "2676eaa2-c3a3-41a9-9403-8cd6e701e4fb"
+                }
+              ]
+            }
+          ],
+          "parameters": [],
+          "requires": {},
+          "owner": "admin"
+        },
+        "state": {
+          "55427e7a-1b68-486e-a9be-8e2d11a6acd5": {
+            "selected_fields": null,
+            "static_message_list_id": null,
+            "titles": {
+              "widget": {
+                "4a7eb697-6950-4f4c-aba9-2d881138926a": "Total de MB Transferidos",
+                "363bf5e7-454d-4b72-bce0-0d8eaed956da": "Total de Pacotes",
+                "44ae6ca1-94a7-4c0f-a24c-39c86f74cf22": "Quantidade de Fluxos",
+                "896651b3-8679-4538-ac52-45a68bb830b0": "Top Source IPs por MB",
+                "c105bcbc-d70b-4430-980d-3b3534855dfc": "Top Destination IPs por MB",
+                "aaf106a0-0fb7-40b6-ac05-151f6d88a092": "Top Origem -> Destino por MB",
+                "c1be7cb5-c23c-4dcb-b248-32a5ec403e2a": "Top Destination Ports por MB",
+                "b4c386ca-62b9-4eb2-9c8c-25c040d56f4b": "ACCEPT vs REJECT",
+                "85aa63d5-a12d-4dbb-bf61-e07a58b74059": "Top Recursos OCI por MB",
+                "ee835a59-c08b-48ff-a3c0-35e4b0348f30": "Top VNICs por MB",
+                "9702c0b4-c1af-4705-aaeb-7f18c3547121": "Top Public IPs por MB",
+                "8af333f3-4c04-4308-a706-b0624d0b9ab8": "Grandes Transferencias por Tupla (MB)"
+              }
+            },
+            "widgets": [
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "4a7eb697-6950-4f4c-aba9-2d881138926a",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total Packets",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_packets)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "363bf5e7-454d-4b72-bce0-0d8eaed956da",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "numeric",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Flows",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "44ae6ca1-94a7-4c0f-a24c-39c86f74cf22",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "bar",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_flow_src_addr"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "896651b3-8679-4538-ac52-45a68bb830b0",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "bar",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 15,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_flow_dst_addr"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 15,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "c105bcbc-d70b-4430-980d-3b3534855dfc",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_flow_src_addr"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    },
+                    {
+                      "fields": [
+                        "oci_flow_dst_addr"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    },
+                    {
+                      "config": {
+                        "name": "Total Packets",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_packets)"
+                    },
+                    {
+                      "config": {
+                        "name": "Flows",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "aaf106a0-0fb7-40b6-ac05-151f6d88a092",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "pie",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 20,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_flow_dst_port"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 20,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "c1be7cb5-c23c-4dcb-b248-32a5ec403e2a",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "pie",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 10,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_flow_action"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 10,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Flows",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_action:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "b4c386ca-62b9-4eb2-9c8c-25c040d56f4b",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 20,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_resource_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 20,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    },
+                    {
+                      "config": {
+                        "name": "Total Packets",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_packets)"
+                    },
+                    {
+                      "config": {
+                        "name": "Flows",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "85aa63d5-a12d-4dbb-bf61-e07a58b74059",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "bar",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 20,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_vnic_ocid"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 20,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "ee835a59-c08b-48ff-a3c0-35e4b0348f30",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "bar",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 20,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_public_ipv4"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 20,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_bytes:*"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "9702c0b4-c1af-4705-aaeb-7f18c3547121",
+                "filters": [],
+                "description": null
+              },
+              {
+                "config": {
+                  "visualization": "table",
+                  "units": {},
+                  "column_limit": null,
+                  "event_annotation": false,
+                  "row_limit": 50,
+                  "row_pivots": [
+                    {
+                      "fields": [
+                        "oci_flow_src_addr"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    },
+                    {
+                      "fields": [
+                        "oci_flow_dst_addr"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    },
+                    {
+                      "fields": [
+                        "oci_flow_dst_port"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    },
+                    {
+                      "fields": [
+                        "oci_flow_protocol_name"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    },
+                    {
+                      "fields": [
+                        "oci_resource_id"
+                      ],
+                      "type": "values",
+                      "config": {
+                        "limit": 50,
+                        "skip_empty_values": true
+                      }
+                    }
+                  ],
+                  "series": [
+                    {
+                      "config": {
+                        "name": "Total MB",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_mbytes)"
+                    },
+                    {
+                      "config": {
+                        "name": "Total Packets",
+                        "thresholds": []
+                      },
+                      "function": "sum(oci_flow_packets)"
+                    },
+                    {
+                      "config": {
+                        "name": "Flows",
+                        "thresholds": []
+                      },
+                      "function": "count()"
+                    }
+                  ],
+                  "rollup": false,
+                  "column_pivots": [],
+                  "visualization_config": null,
+                  "formatting_settings": null,
+                  "sort": []
+                },
+                "query": {
+                  "type": "elasticsearch",
+                  "query_string": "oci_flow_mbytes:>100"
+                },
+                "context": null,
+                "timerange": {
+                  "type": "relative",
+                  "from": 86400
+                },
+                "streams": [],
+                "filter": null,
+                "type": "aggregation",
+                "stream_categories": [],
+                "id": "8af333f3-4c04-4308-a706-b0624d0b9ab8",
+                "filters": [],
+                "description": null
+              }
+            ],
+            "widget_mapping": {
+              "4a7eb697-6950-4f4c-aba9-2d881138926a": [
+                "ca965804-b1b0-47be-a4e7-f365b06481be"
+              ],
+              "363bf5e7-454d-4b72-bce0-0d8eaed956da": [
+                "7883736e-0ec6-48fd-b024-8a575bfb1c83"
+              ],
+              "44ae6ca1-94a7-4c0f-a24c-39c86f74cf22": [
+                "ae5db61a-7108-44df-8517-83a535daaead"
+              ],
+              "896651b3-8679-4538-ac52-45a68bb830b0": [
+                "350f8a99-bf5d-4455-9bd6-a102afc05e4f"
+              ],
+              "c105bcbc-d70b-4430-980d-3b3534855dfc": [
+                "7ffd5c40-bede-484c-a7fd-a47e15032314"
+              ],
+              "aaf106a0-0fb7-40b6-ac05-151f6d88a092": [
+                "90d979f1-78ae-487f-85da-2b88ab14481a"
+              ],
+              "c1be7cb5-c23c-4dcb-b248-32a5ec403e2a": [
+                "86019d4c-d18c-4f5b-ba98-e80108a3cfd2"
+              ],
+              "b4c386ca-62b9-4eb2-9c8c-25c040d56f4b": [
+                "bb99ec76-472a-42bf-b221-12e6fda6abe6"
+              ],
+              "85aa63d5-a12d-4dbb-bf61-e07a58b74059": [
+                "8c67fb4a-8d7a-42cd-9100-bb1edc28277b"
+              ],
+              "ee835a59-c08b-48ff-a3c0-35e4b0348f30": [
+                "1e35bbdb-792e-4a98-9690-fa1536ba5585"
+              ],
+              "9702c0b4-c1af-4705-aaeb-7f18c3547121": [
+                "8ab0575e-4870-4cf2-bfa3-bcb37393058b"
+              ],
+              "8af333f3-4c04-4308-a706-b0624d0b9ab8": [
+                "2676eaa2-c3a3-41a9-9403-8cd6e701e4fb"
+              ]
+            },
+            "positions": {
+              "4a7eb697-6950-4f4c-aba9-2d881138926a": {
+                "col": 1,
+                "row": 1,
+                "height": 3,
+                "width": 4
+              },
+              "363bf5e7-454d-4b72-bce0-0d8eaed956da": {
+                "col": 5,
+                "row": 1,
+                "height": 3,
+                "width": 4
+              },
+              "44ae6ca1-94a7-4c0f-a24c-39c86f74cf22": {
+                "col": 9,
+                "row": 1,
+                "height": 3,
+                "width": 4
+              },
+              "896651b3-8679-4538-ac52-45a68bb830b0": {
+                "col": 1,
+                "row": 4,
+                "height": 4,
+                "width": 6
+              },
+              "c105bcbc-d70b-4430-980d-3b3534855dfc": {
+                "col": 7,
+                "row": 4,
+                "height": 4,
+                "width": 6
+              },
+              "aaf106a0-0fb7-40b6-ac05-151f6d88a092": {
+                "col": 1,
+                "row": 8,
+                "height": 5,
+                "width": 12
+              },
+              "c1be7cb5-c23c-4dcb-b248-32a5ec403e2a": {
+                "col": 5,
+                "row": 13,
+                "height": 4,
+                "width": 4
+              },
+              "b4c386ca-62b9-4eb2-9c8c-25c040d56f4b": {
+                "col": 9,
+                "row": 13,
+                "height": 4,
+                "width": 4
+              },
+              "85aa63d5-a12d-4dbb-bf61-e07a58b74059": {
+                "col": 1,
+                "row": 17,
+                "height": 4,
+                "width": 6
+              },
+              "ee835a59-c08b-48ff-a3c0-35e4b0348f30": {
+                "col": 7,
+                "row": 17,
+                "height": 4,
+                "width": 6
+              },
+              "9702c0b4-c1af-4705-aaeb-7f18c3547121": {
+                "col": 5,
+                "row": 17,
+                "height": 4,
+                "width": 4
+              },
+              "8af333f3-4c04-4308-a706-b0624d0b9ab8": {
+                "col": 1,
+                "row": 21,
+                "height": 6,
+                "width": 12
+              }
+            },
+            "formatting": {
+              "highlighting": []
+            },
+            "display_mode_settings": {
+              "positions": {}
+            }
+          }
+        },
+        "properties": [],
+        "owner": "admin",
+        "title": {
+          "@type": "string",
+          "@value": "OCI VCN Flow Logs - Bandwidth and Transfers"
+        },
+        "type": "DASHBOARD",
+        "description": {
+          "@type": "string",
+          "@value": "Dashboard para identificar grandes consumidores de banda, portas de destino, recursos, VNICs, IPs públicos e grandes transferências em VCN Flow Logs."
+        }
+      },
+      "constraints": [
+        {
+          "type": "server-version",
+          "version": ">=7.1.2+adc6268"
+        }
+      ]
+    }
+  ]
+}
