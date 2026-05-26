@@ -38,6 +38,7 @@ variableGroups:
       - oci_log_bucket_compartment_ocid
       - oci_log_bucket_name
       - oci_log_object_prefix
+      - oci_log_max_object_age_days
       - collector_script_url
   - title: IAM Opcional
     visible: true
@@ -188,6 +189,14 @@ variables:
     title: Prefixo dos objetos de log
     required: false
     default: ""
+
+  oci_log_max_object_age_days:
+    type: number
+    title: Dias maximos de historico dos logs
+    description: "Processa somente objetos modificados nos ultimos N dias. Use 0 para nao limitar por idade."
+    required: true
+    default: 7
+    minimum: 0
 
 
   collector_script_url:

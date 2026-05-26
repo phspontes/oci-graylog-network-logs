@@ -13,7 +13,7 @@ write_files:
         sudo tail -f /var/log/cloud-init-output.log
 
       Para verificar o status final do cloud-init:
-        cloud-init status --long
+        sudo cloud-init status --long
 
       Quando o Docker Compose estiver criado, acompanhe o Graylog com:
         cd /opt/graylog
@@ -57,7 +57,7 @@ write_files:
         sudo tail -f /var/log/cloud-init-output.log
 
       Status do cloud-init:
-        cloud-init status --long
+        sudo cloud-init status --long
 
       Logs de inicializacao do Graylog:
         cd /opt/graylog
@@ -165,8 +165,8 @@ write_files:
         ${oci_log_bucket_compartment_ocid}
       
       Policy statements:
-        Allow dynamic-group ${dynamic_group_name} to inspect buckets in compartment id ${oci_log_bucket_compartment_ocid}
-        Allow dynamic-group ${dynamic_group_name} to read objects in compartment id ${oci_log_bucket_compartment_ocid}
+        Allow dynamic-group ${dynamic_group_name} to inspect buckets in compartment id ${oci_log_bucket_compartment_ocid} where target.bucket.name = '${oci_log_bucket_name}'
+        Allow dynamic-group ${dynamic_group_name} to read objects in compartment id ${oci_log_bucket_compartment_ocid} where target.bucket.name = '${oci_log_bucket_name}'
       
       Bucket usado pelo coletor:
         ${oci_log_bucket_name}
@@ -233,6 +233,7 @@ write_files:
       OCI_LOG_BUCKET_NAME=${oci_log_bucket_name}
       OCI_LOG_BUCKET=${oci_log_bucket_name}
       OCI_LOG_OBJECT_PREFIX=${oci_log_object_prefix}
+      OCI_OS_LOG_MAX_OBJECT_AGE_DAYS=${oci_log_max_object_age_days}
       EOF
 
       chmod 600 /opt/graylog/.env
@@ -348,7 +349,7 @@ write_files:
       Type=simple
       User=root
       EnvironmentFile=/opt/graylog/.env
-      ExecStart=/usr/bin/python3 /opt/graylog/bin/oci_object_storage_logs_to_graylog.py --region ${region} --bucket \$${OCI_LOG_BUCKET} --prefix \$${OCI_LOG_OBJECT_PREFIX} --graylog-url http://127.0.0.1:12202/gelf --graylog-api-url http://127.0.0.1:9000/api
+      ExecStart=/usr/bin/python3 /opt/graylog/bin/oci_object_storage_logs_to_graylog.py --region ${region} --bucket \$${OCI_LOG_BUCKET} --prefix \$${OCI_LOG_OBJECT_PREFIX} --max-object-age-days \$${OCI_OS_LOG_MAX_OBJECT_AGE_DAYS} --graylog-url http://127.0.0.1:12202/gelf --graylog-api-url http://127.0.0.1:9000/api
       Restart=always
       RestartSec=30
 

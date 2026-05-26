@@ -122,6 +122,12 @@ variable "oci_log_object_prefix" {
   default     = ""
 }
 
+variable "oci_log_max_object_age_days" {
+  description = "Processar somente objetos modificados nos ultimos N dias. Use 0 para nao limitar por idade."
+  type        = number
+  default     = 7
+}
+
 
 variable "collector_script_url" {
   description = "URL raw do script Python que coleta logs do Object Storage e envia para o Graylog."

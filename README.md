@@ -26,6 +26,7 @@ Este nao e um aplicativo oficial da Oracle e por isso, nao conta com o seu supor
 - Telemetria do Graylog desabilitada.
 - Input GELF HTTP local em `127.0.0.1:12202`.
 - Coletor Python via systemd lendo objetos de log no Object Storage com Instance Principal.
+- Limite padrao de processamento para objetos modificados nos ultimos 7 dias, com `0` para sem limite.
 - Content Pack com dashboards de VCN Flow Logs instalado automaticamente.
 
 ## Estrutura do repositorio
@@ -100,7 +101,8 @@ gh release create v1.0.0 oci-graylog-network-logs.zip \
 - `oci_log_bucket_compartment_ocid`: compartment do bucket de logs.
 - `oci_log_bucket_name`: bucket com logs arquivados pelo Service Connector Hub.
 - `oci_log_object_prefix`: prefixo opcional dos objetos no bucket.
-- `create_iam_policy`: cria Dynamic Group e Policy automaticamente se habilitado.
+- `oci_log_max_object_age_days`: processa somente objetos modificados nos ultimos N dias; `0` desativa o limite.
+- `create_iam_policy`: cria Dynamic Group e Policy automaticamente se habilitado, restrita ao nome do bucket informado.
 
 ## Acesso apos o deploy
 

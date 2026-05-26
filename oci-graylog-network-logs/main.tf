@@ -41,6 +41,7 @@ locals {
     oci_log_bucket_compartment_ocid = var.oci_log_bucket_compartment_ocid
     oci_log_bucket_name             = var.oci_log_bucket_name
     oci_log_object_prefix           = var.oci_log_object_prefix
+    oci_log_max_object_age_days     = var.oci_log_max_object_age_days
     collector_script_url            = var.collector_script_url
     graylog_content_pack_url        = var.graylog_content_pack_url
     create_iam_policy               = var.create_iam_policy
@@ -145,7 +146,7 @@ resource "oci_identity_policy" "graylog_object_logs" {
   description    = "Permite que ${local.dynamic_group_name} leia objetos do bucket ${var.oci_log_bucket_name}."
 
   statements = [
-    "Allow dynamic-group ${oci_identity_dynamic_group.graylog[0].name} to inspect buckets in compartment id ${var.oci_log_bucket_compartment_ocid}",
-    "Allow dynamic-group ${oci_identity_dynamic_group.graylog[0].name} to read objects in compartment id ${var.oci_log_bucket_compartment_ocid}",
+    "Allow dynamic-group ${oci_identity_dynamic_group.graylog[0].name} to inspect buckets in compartment id ${var.oci_log_bucket_compartment_ocid} where target.bucket.name = '${var.oci_log_bucket_name}'",
+    "Allow dynamic-group ${oci_identity_dynamic_group.graylog[0].name} to read objects in compartment id ${var.oci_log_bucket_compartment_ocid} where target.bucket.name = '${var.oci_log_bucket_name}'",
   ]
 }

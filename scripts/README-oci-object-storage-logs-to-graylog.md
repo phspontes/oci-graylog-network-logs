@@ -96,3 +96,7 @@ RestartSec=30
 [Install]
 WantedBy=multi-user.target
 ```
+
+## Limite de historico
+
+Use `--max-object-age-days N` para processar somente objetos modificados nos ultimos N dias. O default e `7`. Use `0` para desativar o limite por idade.

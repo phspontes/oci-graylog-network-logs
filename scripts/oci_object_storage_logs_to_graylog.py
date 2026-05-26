@@ -47,6 +47,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--interval-seconds", type=int, default=int(os.getenv("OCI_OS_LOG_INTERVAL_SECONDS", "300")), help="Polling interval")
     parser.add_argument("--max-objects", type=int, default=int(os.getenv("OCI_OS_LOG_MAX_OBJECTS", "100")), help="Maximum new objects to process per cycle")
     parser.add_argument("--list-limit", type=int, default=int(os.getenv("OCI_OS_LOG_LIST_LIMIT", "1000")), help="Object list page size")
+    parser.add_argument("--max-object-age-days", type=int, default=int(os.getenv("OCI_OS_LOG_MAX_OBJECT_AGE_DAYS", "7")), help="Only process objects modified in the last N days. Use 0 for no age limit.")
     parser.add_argument("--once", action="store_true", help="Run one polling cycle and exit")
     parser.add_argument("--dry-run", action="store_true", help="Print GELF payloads instead of sending")
     parser.add_argument("--include-processed", action="store_true", help="Ignore checkpoint and reprocess listed objects")
@@ -106,6 +107,15 @@ def object_marker(obj: Any) -> str:
 
 def is_processed(state: Dict[str, Any], obj: Any) -> bool:
     return state.get("processed", {}).get(obj.name) == object_marker(obj)
+
+
+def object_is_recent_enough(obj: Any, cutoff: Optional[dt.datetime]) -> bool:
+    if cutoff is None:
+        return True
+    modified = parse_time(getattr(obj, "time_modified", None))
+    if modified is None:
+        return True
+    return modified >= cutoff
 
 
 def mark_processed(state: Dict[str, Any], obj: Any) -> None:
@@ -527,15 +537,25 @@ def main() -> int:
 
     while not STOP:
         state = load_state(state_path)
+        cutoff = None
+        if args.max_object_age_days > 0:
+            cutoff = now_utc() - dt.timedelta(days=args.max_object_age_days)
+
         objects = sorted(
             list_objects(client, namespace, args.bucket, args.prefix, args.list_limit),
-            key=lambda item: (item.time_modified or dt.datetime.min.replace(tzinfo=UTC), item.name),
+            key=lambda item: (parse_time(getattr(item, "time_modified", None)) or dt.datetime.min.replace(tzinfo=UTC), item.name),
         )
-        candidates = [obj for obj in objects if args.include_processed or not is_processed(state, obj)]
+        recent_objects = [obj for obj in objects if object_is_recent_enough(obj, cutoff)]
+        skipped_by_age = len(objects) - len(recent_objects)
+        candidates = [obj for obj in recent_objects if args.include_processed or not is_processed(state, obj)]
         candidates = candidates[: args.max_objects]
         total_events = 0
 
-        print(f"Found {len(candidates)} new object(s) in bucket={args.bucket} prefix={args.prefix!r}", flush=True)
+        print(
+            f"Found {len(candidates)} new object(s) in bucket={args.bucket} prefix={args.prefix!r}; "
+            f"skipped_by_age={skipped_by_age}; max_object_age_days={args.max_object_age_days}",
+            flush=True,
+        )
         for obj in candidates:
             print(f"Processing object: {obj.name}", flush=True)
             sent = process_object(client, namespace, args.bucket, obj, args.graylog_url, args.dry_run)

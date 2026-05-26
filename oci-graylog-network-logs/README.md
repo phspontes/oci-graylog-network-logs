@@ -24,6 +24,7 @@ Este nao e um aplicativo oficial da Oracle e por isso, nao conta com o seu supor
 - Input GELF HTTP local criado automaticamente na porta `12202/tcp`, publicado apenas em `127.0.0.1`.
 - Content Pack de dashboards VCN Flow Logs baixado e instalado automaticamente no primeiro start do Graylog.
 - Coletor Python via systemd lendo logs do Object Storage e enviando para o Graylog.
+- Processamento limitado por padrao a objetos modificados nos ultimos 7 dias; use `0` para sem limite.
 
 ## Acesso
 
@@ -94,12 +95,13 @@ Informe no Resource Manager:
 
 - `Bucket de logs OCI`: bucket onde o Service Connector Hub grava os logs.
 - `Prefixo dos objetos de log`: prefixo opcional, por exemplo `oci-logs/`.
+- `Dias maximos de historico dos logs`: default `7`; use `0` para processar objetos sem limite por idade.
 
 A VM usa Instance Principal para ler o bucket. Crie um Dynamic Group para a instancia e policies como:
 
 ```text
-Allow dynamic-group <dynamic-group-graylog> to inspect buckets in compartment <compartment-do-bucket>
-Allow dynamic-group <dynamic-group-graylog> to read objects in compartment <compartment-do-bucket>
+Allow dynamic-group <dynamic-group-graylog> to inspect buckets in compartment <compartment-do-bucket> where target.bucket.name = '<nome-do-bucket>'
+Allow dynamic-group <dynamic-group-graylog> to read objects in compartment <compartment-do-bucket> where target.bucket.name = '<nome-do-bucket>'
 ```
 
 O servico local do coletor e:
@@ -116,6 +118,6 @@ A porta GELF HTTP `12202/tcp` nao fica exposta externamente; ela e publicada ape
 A stack tem a opcao `Criar Dynamic Group e Policy`.
 
 - `false` por padrao: nao cria IAM; a VM grava a sintaxe em `/root/graylog-oci-iam-policy.txt`.
-- `true`: cria um Dynamic Group restrito ao OCID da instancia e uma Policy no compartment do bucket para permitir leitura dos objetos.
+- `true`: cria um Dynamic Group restrito ao OCID da instancia e uma Policy no compartment do bucket, limitada ao nome do bucket informado, para permitir leitura dos objetos.
 
 Para o modo automatico funcionar, o Resource Manager precisa ter permissao para criar Dynamic Groups e Policies. Se a organizacao centraliza IAM, mantenha `false` e entregue o arquivo de sintaxe gerado na VM para aplicacao manual.
