@@ -26,13 +26,26 @@ Este não é um aplicativo oficial da Oracle e, por isso, não conta com o seu s
 - Coletor Python via systemd lendo logs do Object Storage e enviando para o Graylog.
 - Processamento limitado, por padrão, a objetos modificados nos últimos 7 dias. Use `0` para não limitar por idade.
 
+## Configurações manuais necessárias
+
+Antes de executar a stack, você deve criar e configurar manualmente na OCI:
+
+- o bucket Object Storage que receberá os logs;
+- a habilitação dos VCN Flow Logs nos recursos de rede desejados;
+- o Service Connector Hub enviando os logs do OCI Logging para o bucket;
+- as regras de rota e segurança necessárias para a VM acessar internet/serviços OCI;
+- as permissões IAM para leitura do bucket, caso não use a opção automática de Dynamic Group e Policy da stack.
+
+A stack parte do pressuposto de que os logs já estão sendo gravados no bucket informado. Ela provisiona o Graylog, o coletor e os dashboards, mas não cria o pipeline de geração/exportação dos VCN Flow Logs.
+
 ## Como usar
 
-1. Crie a stack no OCI Resource Manager usando o ZIP deste diretório.
-2. Preencha os parâmetros de rede, instância, bucket de logs e acesso.
-3. Execute o job **Apply**.
-4. Aguarde o cloud-init concluir a instalação.
-5. Acesse o Graylog usando o output `graylog_url`.
+1. Crie manualmente o bucket, habilite os VCN Flow Logs e configure o Service Connector Hub para gravar os logs no bucket.
+2. Crie a stack no OCI Resource Manager usando o ZIP deste diretório.
+3. Preencha os parâmetros de rede, instância, bucket de logs e acesso.
+4. Execute o job **Apply**.
+5. Aguarde o cloud-init concluir a instalação.
+6. Acesse o Graylog usando o output `graylog_url`.
 
 ## Acesso
 

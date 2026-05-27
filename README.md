@@ -52,6 +52,18 @@ Graylog GELF HTTP local, 127.0.0.1:12202
 Dashboards Graylog
 ```
 
+## Configurações manuais necessárias
+
+Antes de executar a stack, você deve criar e configurar manualmente na OCI:
+
+- o bucket Object Storage que receberá os logs;
+- a habilitação dos VCN Flow Logs nos recursos de rede desejados;
+- o Service Connector Hub enviando os logs do OCI Logging para o bucket;
+- as regras de rota e segurança necessárias para a VM acessar internet/serviços OCI;
+- as permissões IAM para leitura do bucket, caso não use a opção automática de Dynamic Group e Policy da stack.
+
+A stack parte do pressuposto de que os logs já estão sendo gravados no bucket informado. Ela provisiona o Graylog, o coletor e os dashboards, mas não cria o pipeline de geração/exportação dos VCN Flow Logs.
+
 ## Como usar
 
 1. Clique em **Deploy to Oracle Cloud** no início deste README.
@@ -66,7 +78,9 @@ Dashboards Graylog
 
 - VCN e subnet existentes na OCI.
 - Chave pública SSH para acesso ao usuário `opc`.
-- Bucket Object Storage recebendo logs pelo Service Connector Hub.
+- Bucket Object Storage criado manualmente.
+- VCN Flow Logs habilitados manualmente nos recursos de rede desejados.
+- Service Connector Hub configurado manualmente para enviar os logs ao bucket.
 - Permissão para criar VM, VNIC, Network Security Group e, opcionalmente, Dynamic Group/Policy.
 - Regras de rota e segurança permitindo acesso de saída da VM à internet ou aos serviços necessários da OCI.
 

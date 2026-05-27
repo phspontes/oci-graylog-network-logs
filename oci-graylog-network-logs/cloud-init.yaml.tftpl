@@ -242,7 +242,7 @@ write_files:
       services:
         mongodb:
           image: mongo:7.0
-          restart: on-failure
+          restart: unless-stopped
           networks:
             - graylog
           volumes:
@@ -252,7 +252,7 @@ write_files:
         datanode:
           image: $${DATANODE_IMAGE:-graylog/graylog-datanode:7.1}
           hostname: datanode
-          restart: on-failure
+          restart: unless-stopped
           networks:
             - graylog
           environment:
@@ -277,7 +277,7 @@ write_files:
         graylog:
           image: $${GRAYLOG_IMAGE:-graylog/graylog:7.1}
           hostname: server
-          restart: on-failure
+          restart: unless-stopped
           depends_on:
             mongodb:
               condition: service_started
